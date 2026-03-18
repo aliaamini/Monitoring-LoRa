@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>LoRa Telemetry Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#1f2138;
+color:white;
+text-align:center;
+margin:0;
+}
+
+h1{
+margin-top:20px;
+}
+
+.container{
+display:flex;
+justify-content:center;
+gap:15px;
+margin-top:20px;
+flex-wrap:wrap;
+}
+
+.card{
+background:#2b2f4a;
+padding:15px;
+border-radius:8px;
+width:140px;
+}
+
+.value{
+font-size:22px;
+color:cyan;
+}
+
+.graph-grid{
+width:90%;
+margin:auto;
+margin-top:30px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.graph-box{
+background:#2b2f4a;
+padding:15px;
+border-radius:8px;
+}
+
+canvas{
+height:180px !important;
+}
+
+.desc{
+font-size:12px;
+color:#bbbbbb;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>LORA TELEMETRY DASHBOARD</h1>
+
+<div class="container">
+
+<div class="card">
+<h3>NODE</h3>
+<div class="value" id="node">-</div>
+</div>
+
+<div class="card">
+<h3>TEMPERATURE</h3>
+<div class="value" id="temp">0</div>
+</div>
+
+<div class="card">
+<h3>HUMIDITY</h3>
+<div class="value" id="hum">0</div>
+</div>
+
+<div class="card">
+<h3>SOIL</h3>
+<div class="value" id="soil">0</div>
+</div>
+
+<div class="card">
+<h3>LIGHT</h3>
+<div class="value" id="light">0</div>
+</div>
+
+</div>
+
+
+<div class="graph-grid">
+
+<div class="graph-box">
+<h3>Temperature (°C)</h3>
+<div class="desc">Grafik suhu lingkungan</div>
+<canvas id="tempChart"></canvas>
+</div>
+
+<div class="graph-box">
+<h3>Humidity (%)</h3>
+<div class="desc">Grafik kelembaban udara</div>
+<canvas id="humChart"></canvas>
+</div>
+
+<div class="graph-box">
+<h3>Soil Moisture</h3>
+<div class="desc">Grafik kelembaban tanah</div>
+<canvas id="soilChart"></canvas>
+</div>
+
+<div class="graph-box">
+<h3>Light (Lux)</h3>
+<div class="desc">Grafik intensitas cahaya</div>
+<canvas id="lightChart"></canvas>
+</div>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import { getDatabase, ref, onValue } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBZiwB6FkH2zuMrF6vMKFwc9pdNYP8Ut4A",
+
+authDomain: "loramonitoring.firebaseapp.com",
+
+databaseURL: "https://loramonitoring-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+projectId: "loramonitoring",
+
+storageBucket: "loramonitoring.firebasestorage.app",
+
+messagingSenderId: "579777972279",
+
+appId: "1:579777972279:web:abfe343a61cf25116f57b2"
+
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const database = getDatabase(app);
+
+const sensorRef = ref(database,"sensor_data");
+
+
+let tempChart;
+let humChart;
+let soilChart;
+let lightChart;
+
+
+onValue(sensorRef,(snapshot)=>{
+
+const data = snapshot.val();
+
+if(!data) return;
+
+const keys = Object.keys(data);
+
+const last = data[keys[keys.length-1]];
+
+
+document.getElementById("node").innerHTML = last.node;
+
+document.getElementById("temp").innerHTML = last.temperature;
+
+document.getElementById("hum").innerHTML = last.humidity;
+
+document.getElementById("soil").innerHTML = last.soil;
+
+document.getElementById("light").innerHTML = last.light;
+
+
+let labels=[];
+
+let tempData=[];
+
+let humData=[];
+
+let soilData=[];
+
+let lightData=[];
+
+
+keys.forEach(k=>{
+
+labels.push(k);
+
+tempData.push(data[k].temperature);
+
+humData.push(data[k].humidity);
+
+soilData.push(data[k].soil);
+
+lightData.push(data[k].light);
+
+});
+
+
+drawCharts(labels,tempData,humData,soilData,lightData);
+
+});
+
+
+function drawCharts(labels,tempData,humData,soilData,lightData){
+
+if(tempChart) tempChart.destroy();
+
+if(humChart) humChart.destroy();
+
+if(soilChart) soilChart.destroy();
+
+if(lightChart) lightChart.destroy();
+
+
+tempChart = new Chart(document.getElementById("tempChart"),{
+
+type:'line',
+
+data:{
+labels:labels,
+datasets:[{
+data:tempData,
+borderColor:'red',
+tension:0.3
+}]
+},
+
+options:{plugins:{legend:{display:false}}}
+
+});
+
+
+humChart = new Chart(document.getElementById("humChart"),{
+
+type:'line',
+
+data:{
+labels:labels,
+datasets:[{
+data:humData,
+borderColor:'blue',
+tension:0.3
+}]
+},
+
+options:{plugins:{legend:{display:false}}}
+
+});
+
+
+soilChart = new Chart(document.getElementById("soilChart"),{
+
+type:'line',
+
+data:{
+labels:labels,
+datasets:[{
+data:soilData,
+borderColor:'green',
+tension:0.3
+}]
+},
+
+options:{plugins:{legend:{display:false}}}
+
+});
+
+
+lightChart = new Chart(document.getElementById("lightChart"),{
+
+type:'line',
+
+data:{
+labels:labels,
+datasets:[{
+data:lightData,
+borderColor:'orange',
+tension:0.3
+}]
+},
+
+options:{plugins:{legend:{display:false}}}
+
+});
+
+}
+
+</script>
+
+</body>
+
+</html>
